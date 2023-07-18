@@ -46,6 +46,12 @@ MODULE_PARM_DESC(disable_deadzones,
 		 "(bool) Disable dead zone handling for raw processing by Wine/Proton, confuses joydev. "
 		 "0: disable, 1: enable.");
 
+static bool param_disable_button_chords = 0;
+module_param_named(disable_button_chords, param_disable_button_chords, bool, 0644);
+MODULE_PARAM_DESC(disable_button_chords,
+		"(bool) Disable button chords with XBOX button. Will prohibit profile switching when enabled. "
+		"0: disable, 1: enable.")
+
 static struct {
 	char *args[17];
 	unsigned int nargs;
@@ -932,27 +938,31 @@ static int xpadneo_event(struct hid_device *hdev, struct hid_field *field,
 			goto combine_z_axes;
 		}
 	} else if ((usage->type == EV_KEY) && (usage->code == BTN_XBOX)) {
-		/*
-		 * Handle the Xbox logo button: We want to cache the button
-		 * down event to allow for profile switching. The button will
-		 * act as a shift key and only send the input events when
-		 * released without pressing an additional button.
-		 */
-		if (!xdata->xbox_button_down && (value == 1)) {
-			/* cache this event */
-			xdata->xbox_button_down = true;
-		} else if (xdata->xbox_button_down && (value == 0)) {
-			xdata->xbox_button_down = false;
-			if (xdata->profile_switched) {
-				xdata->profile_switched = false;
-			} else {
-				/* replay cached event */
-				input_report_key(gamepad, BTN_XBOX, 1);
-				input_sync(gamepad);
-				/* synthesize the release to remove the scan code */
-				input_report_key(gamepad, BTN_XBOX, 0);
-				input_sync(gamepad);
+		if (!param_disable_button_chords) {
+			/*
+			* Handle the Xbox logo button: We want to cache the button
+			* down event to allow for profile switching. The button will
+			* act as a shift key and only send the input events when
+			* released without pressing an additional button.
+			*/
+			if (!xdata->xbox_button_down && (value == 1)) {
+				/* cache this event */
+				xdata->xbox_button_down = true;
+			} else if (xdata->xbox_button_down && (value == 0)) {
+				xdata->xbox_button_down = false;
+				if (xdata->profile_switched) {
+					xdata->profile_switched = false;
+				} else {
+					/* replay cached event */
+					input_report_key(gamepad, BTN_XBOX, 1);
+					input_sync(gamepad);
+					/* synthesize the release to remove the scan code */
+					input_report_key(gamepad, BTN_XBOX, 0);
+					input_sync(gamepad);
+				}
 			}
+		} else {
+			input_report_key(gamepad, BTN_XBOX, value);
 		}
 		goto stop_processing;
 	} else if ((usage->type == EV_KEY) && (usage->code == BTN_SHARE)) {

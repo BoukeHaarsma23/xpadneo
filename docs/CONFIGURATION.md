@@ -33,6 +33,10 @@ files in `/sys/module/hid_xpadneo/parameters`:
     * `16` if your controller boots in Linux mode (auto-detected, do not change manually)
     * `32` if you prefer to use Nintendo button mappings (i.e., 8BitDo controllers, defaults to off)
     * `64` if your controller has a awkwardly mapped Share button (auto-detected, do not set manually)
+* 'disable_chords' (default 0)
+  * Let's you disable the button chords used with the XBOX button
+  * '0' will cache XBOX button presses for profile switching
+  * '1' will disable XBOX button chords and will pass them through without caching
 
 Some settings may need to be changed at loading time of the module, take a look at the following example to see how
 that works:
